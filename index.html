@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>数字红包</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:#e63946; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; color:#fff; }
+  .wrap { width:100%; max-width:360px; text-align:center; }
+  h1 { font-size:22px; margin-bottom:8px; }
+  .sub { font-size:13px; opacity:.85; margin-bottom:24px; }
+  .card { background:#fff; border-radius:16px; padding:24px 20px; color:#333; box-shadow:0 10px 40px rgba(0,0,0,.2); }
+  .card label { display:block; text-align:left; font-size:14px; color:#666; margin:12px 0 6px; }
+  .card input { width:100%; padding:12px 14px; border:1px solid #ddd; border-radius:10px; font-size:16px; outline:none; }
+  .card input:focus { border-color:#e63946; }
+  .btns { display:flex; gap:10px; margin-top:18px; flex-wrap:wrap; }
+  .btn { flex:1; min-width:80px; padding:12px; border:none; border-radius:10px; font-size:15px; cursor:pointer; transition:.2s; }
+  .btn-main { background:#e63946; color:#fff; flex:100%; font-size:17px; padding:14px; font-weight:bold; }
+  .btn-main:active { transform:scale(.97); }
+  .btn-quick { background:#fbe9eb; color:#e63946; font-size:13px; }
+  .result { margin-top:20px; background:rgba(255,255,255,.15); border-radius:12px; padding:16px; word-break:break-all; }
+  .result a { color:#ffe66d; font-size:14px; }
+  .mask { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:99; }
+  .mask.show { display:flex; }
+  .env { background:#e63946; width:280px; border-radius:18px; padding:30px 20px; text-align:center; position:relative; box-shadow:0 0 60px rgba(255,200,0,.4); animation:pop .4s; }
+  @keyframes pop { from{transform:scale(.6);opacity:0} to{transform:scale(1);opacity:1} }
+  .env .lid { font-size:48px; }
+  .env .title { font-size:18px; margin:10px 0; }
+  .env .amount { font-size:44px; font-weight:bold; color:#ffe66d; margin:12px 0; }
+  .env .tip { font-size:13px; opacity:.8; }
+  .close { position:absolute; top:10px; right:14px; font-size:22px; cursor:pointer; }
+  .list { margin-top:18px; text-align:left; }
+  .list h3 { font-size:15px; margin-bottom:8px; color:#fff; }
+  .list div { background:rgba(255,255,255,.12); padding:8px 12px; border-radius:8px; font-size:13px; margin-bottom:4px; display:flex; justify-content:space-between; }
+  .best { color:#ffe66d; font-weight:bold; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="mask" id="mask">
+  <div class="env">
+    <div class="close" onclick="closeEnv()">✕</div>
+    <div class="lid" id="lid">🧧</div>
+    <div class="title" id="envTitle">数字红包</div>
+    <div class="amount" id="envAmount" style="display:none"></div>
+    <div class="tip" id="envTip">点击拆开</div>
+    <button class="btn btn-main" id="openBtn" style="margin-top:16px" onclick="openRed()">拆红包</button>
+  </div>
+</div>
+<script>
+const API = 'https://你的域名.vercel.app';
+const app = document.getElementById('app');
+const params = new URLSearchParams(location.search);
+const rid = params.get('r');
+if (rid) { renderOpen(rid); } else { renderSend(); }
+
+function renderSend() {
+  app.innerHTML = `
+    <h1>🧧 发数字红包</h1>
+    <div class="sub">仅供娱乐，无真实资金往来</div>
+    <div class="card">
+      <label>总金额</label>
+      <input id="total" type="number" placeholder="如 100" value="100">
+      <div class="btns">
+        <button class="btn btn-quick" onclick="setTotal(8.88)">8.88</button>
+        <button class="btn btn-quick" onclick="setTotal(18.88)">18.88</button>
+        <button class="btn btn-quick" onclick="setTotal(66.66)">66.66</button>
+        <button class="btn btn-quick" onclick="setTotal(88.88)">88.88</button>
+      </div>
+      <label>红包个数（1-100）</label>
+      <input id="count" type="number" placeholder="如 5" value="5" min="1" max="100">
+      <button class="btn btn-main" onclick="send()">塞钱进红包</button>
+    </div>
+    <div class="result" id="result"></div>`;
+}
+function setTotal(v){ document.getElementById('total').value = v; }
+
+async function send() {
+  const total = parseFloat(document.getElementById('total').value);
+  const count = parseInt(document.getElementById('count').value);
+  if (!total || total <= 0) return alert('请输入有效金额');
+  if (!count || count < 1 || count > 100) return alert('个数在 1-100 之间');
+  const res = await fetch(API + '/api/create', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({total, count})
+  });
+  const data = await res.json();
+  const link = location.origin + '?r=' + data.id;
+  document.getElementById('result').innerHTML =
+    '✅ 红包已生成！<br><br>把下面链接发给朋友：<br><a href="' + link + '">' + link + '</a><br><br>你的链接：<a href="?r=' + data.id + '">点击预览</a>';
+}
+
+async function renderOpen(id) {
+  app.innerHTML = `<h1>🧧 有人发了一个数字红包</h1><div class="sub">点下方红包拆开试试手气</div>
+    <div class="card" style="padding:40px 20px">
+      <div style="font-size:80px">🧧</div>
+      <div style="margin-top:12px;font-size:16px;color:#e63946;font-weight:bold">恭喜发财，大吉大利</div>
+      <button class="btn btn-main" onclick="doGrab('${id}')">拆开红包</button>
+    </div>
+    <div class="list" id="list"></div>`;
+  refresh(id);
+}
+async function doGrab(id) {
+  const name = '用户' + Math.floor(Math.random()*9000+1000);
+  const res = await fetch(API + '/api/grab', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({id, name})
+  });
+  const data = await res.json();
+  if (data.error) { alert(data.error); return; }
+  showResult(data.amount);
+  refresh(id);
+}
+function showResult(amount) {
+  document.getElementById('lid').textContent = '🎉';
+  document.getElementById('envTitle').textContent = '恭喜你抢到';
+  document.getElementById('envAmount').style.display = 'block';
+  document.getElementById('envAmount').textContent = amount.toFixed(2);
+  document.getElementById('envTip').textContent = '数字红包（仅供娱乐）';
+  document.getElementById('openBtn').style.display = 'none';
+  document.getElementById('mask').classList.add('show');
+}
+function closeEnv(){ document.getElementById('mask').classList.remove('show'); location.reload(); }
+
+async function refresh(id) {
+  const res = await fetch(API + '/api/status?id=' + id);
+  const data = await res.json();
+  const list = document.getElementById('list');
+  if (!list || !data.records) return;
+  let html = '<h3>🏆 抢红包记录</h3>';
+  data.records.forEach(r => {
+    const best = r.name === data.best ? ' 👑手气最佳' : '';
+    html += '<div><span class="' + (r.name===data.best?'best':'') + '">' + r.name + best + '</span><span>' + r.amount.toFixed(2) + '</span></div>';
+  });
+  if (data.records.length === data.count) html += '<div style="text-align:center;margin-top:8px;opacity:.8">🎊 红包已被抢光</div>';
+  else html += '<div style="text-align:center;margin-top:8px;opacity:.8">已抢 ' + data.records.length + '/' + data.count + '</div>';
+  list.innerHTML = html;
+}
+setInterval(() => { if (rid) refresh(rid); }, 3000);
+</script>
+</body>
+</html>
